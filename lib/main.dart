@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:tienda_ecommerce/core/constants.dart';
 import 'package:tienda_ecommerce/screens/customer/ResumenVehiculoScreen.dart';
 import 'package:tienda_ecommerce/screens/customer/detalle_compra_screen.dart';
+import 'package:tienda_ecommerce/screens/customer/mis_servicios_page.dart';
 import 'package:tienda_ecommerce/screens/customer/vehiculo_catalogo_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
@@ -76,6 +77,7 @@ class MudanzasGoApp extends StatelessWidget {
             '/catalogo-vehiculos': (_) => VehiculoCatalogoScreen(),
             '/resumen-vehiculo': (_) => ResumenVehiculoScreen(),
             '/detalle-compra': (_) => DetalleCompraScreen(),
+            '/mis-servicios':(_)=>MisServiciosPage()
           },
         );
       },

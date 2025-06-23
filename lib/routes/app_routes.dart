@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:tienda_ecommerce/screens/customer/ResumenVehiculoScreen.dart';
 import 'package:tienda_ecommerce/screens/customer/detalle_compra_screen.dart';
+import 'package:tienda_ecommerce/screens/customer/mis_servicios_page.dart';
 import 'package:tienda_ecommerce/screens/customer/vehiculo_catalogo_screen.dart';
+import 'package:tienda_ecommerce/widgets/shared/auth_guard.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
 import '../screens/customer/home_screen.dart';
@@ -50,5 +52,6 @@ Map<String, WidgetBuilder> appRoutes = {
   '/catalogo-vehiculos': (_) => VehiculoCatalogoScreen(),
   '/resumen-vehiculo': (_) => ResumenVehiculoScreen(),
   '/detalle-compra': (_) => DetalleCompraScreen(),
+'/mis-servicios': (_) => const AuthGuard(child: MisServiciosPage()),
 
 };

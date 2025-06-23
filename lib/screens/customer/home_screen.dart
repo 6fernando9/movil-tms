@@ -279,7 +279,13 @@ class _HomeScreenState extends State<HomeScreen> {
             title: Text('Catálogo de Vehículos'),
             onTap: () => Navigator.pushNamed(context, '/home'),
           ),
+           ListTile(
+            leading: Icon(Icons.local_shipping),
+            title: Text('Mis Servicios'),
+            onTap: () => Navigator.pushNamed(context, '/mis-servicios'),
+          ),
         ],
+
       ),
     );
   }
