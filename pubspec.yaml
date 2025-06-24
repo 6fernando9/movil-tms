@@ -48,6 +48,8 @@ dependencies:
   pdf: ^3.11.3
   excel: ^4.0.6
   printing: ^5.14.2
+  geocoding: ^2.1.1
+  latlong2: ^0.9.0
 
 dev_dependencies:
   flutter_test:

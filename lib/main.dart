@@ -14,22 +14,19 @@ import 'screens/employee/employee_panel_screen.dart';
 import 'screens/chofer/chofer_panel_screen.dart';
 import 'providers/auth_provider.dart';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../screens/customer/profile_screen.dart';
 import '../screens/customer/servicio_local_screen.dart';
 import '../screens/customer/servicio_nacional_screen.dart';
 import '../screens/customer/contacto_screen.dart';
 
 import 'screens/customer/payment_screen.dart';
-
 import 'screens/customer/catalogo_screen.dart';
 import 'screens/customer/vehicle_info_screen.dart';
 import 'screens/customer/solicitar_servicio_screen.dart';
-import 'screens/customer/payment_screen.dart';
 
 import './widgets/customer/cotizacion_screen.dart';
 import './widgets/customer/rellenar_cotizacion_screen.dart';
+import './widgets/customer/cotizacion_local_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -77,6 +74,7 @@ class MudanzasGoApp extends StatelessWidget {
             '/catalogo-vehiculos': (_) => VehiculoCatalogoScreen(),
             '/resumen-vehiculo': (_) => ResumenVehiculoScreen(),
             '/detalle-compra': (_) => DetalleCompraScreen(),
+            '/cotizacion-local': (_) => CotizacionLocalScreen(),
             '/mis-servicios': (_) => MisServiciosPage(),
           },
         );

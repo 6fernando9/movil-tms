@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'mapa_mudanza_widget.dart';
+import 'mapa_mudanza_local_widget.dart';
 
 class CotizacionScreen extends StatefulWidget {
   @override
@@ -14,13 +15,24 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
   TextEditingController _destinoController = TextEditingController();
 
   String? _embalajeSeleccionado;
-  String? _tipoViajeSeleccionado;
   String? _residenciaSeleccionada;
 
   String? _origenCiudad;
   String? _destinoCiudad;
 
   double? _distanciaKm;
+
+  static const List<String> ciudadesBolivia = [
+    'La Paz',
+    'Santa Cruz',
+    'Cochabamba',
+    'Oruro',
+    'Potosí',
+    'Tarija',
+    'Sucre',
+    'Trinidad',
+    'Cobija',
+  ];
 
   @override
   void initState() {
@@ -32,7 +44,8 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
   Future<void> _guardarDatos() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('embalaje', _embalajeSeleccionado == 'Sí');
-    await prefs.setString('tipo_viaje', _tipoViajeSeleccionado ?? '');
+    // Forzar tipo_viaje a 'Nacional' para este flujo
+    await prefs.setString('tipo_viaje', 'Nacional');
     await prefs.setString('residencia', _residenciaSeleccionada ?? '');
     await prefs.setString('origen', _origenController.text);
     await prefs.setString('destino', _destinoController.text);
@@ -60,6 +73,16 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Obtener la zona seleccionada desde los argumentos
+    final args = ModalRoute.of(context)?.settings.arguments;
+    String? zonaSeleccionada;
+    if (args is Map && args['zona'] is String) {
+      zonaSeleccionada = args['zona'] as String;
+      if (_origenController.text.isEmpty) {
+        _origenController.text = zonaSeleccionada;
+      }
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Formulario Inicial'),
@@ -70,19 +93,35 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (zonaSeleccionada != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orangeAccent),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.deepOrange),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Zona seleccionada: $zonaSeleccionada',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             _buildSelector(
               "¿Quiere el servicio con Embalaje?",
               ["Sí", "No"],
               _embalajeSeleccionado,
               (val) => setState(() => _embalajeSeleccionado = val),
-            ),
-
-            const SizedBox(height: 16),
-            _buildSelector(
-              "Seleccione el tipo de Viaje",
-              ["Local", "Nacional"],
-              _tipoViajeSeleccionado,
-              (val) => setState(() => _tipoViajeSeleccionado = val),
             ),
 
             const SizedBox(height: 16),
@@ -120,16 +159,46 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
             ),
 
             const SizedBox(height: 24),
-            // --- Mapa y selección de ciudades ---
+            // --- Mapa y selección de ciudades nacional ---
+            Text('¿Dónde comienza tu mudanza?'),
+            DropdownButton<String>(
+              value: _origenCiudad,
+              hint: const Text('Selecciona ciudad de origen'),
+              isExpanded: true,
+              items:
+                  ciudadesBolivia
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+              onChanged: (val) {
+                setState(() {
+                  _origenCiudad = val;
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            Text('¿Hacia dónde te mudamos?'),
+            DropdownButton<String>(
+              value: _destinoCiudad,
+              hint: const Text('Selecciona ciudad de destino'),
+              isExpanded: true,
+              items:
+                  ciudadesBolivia
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+              onChanged: (val) {
+                setState(() {
+                  _destinoCiudad = val;
+                });
+              },
+            ),
+            const SizedBox(height: 16),
             MapaMudanzaWidget(
               origen: _origenCiudad,
               destino: _destinoCiudad,
               onChanged: (origen, destino, {double? distanciaKm}) {
                 setState(() {
-                  _origenCiudad = origen;
-                  _destinoCiudad = destino;
-                  _origenController.text = origen;
-                  _destinoController.text = destino;
+                  _origenController.text = _origenCiudad ?? '';
+                  _destinoController.text = _destinoCiudad ?? '';
                   if (distanciaKm != null) _distanciaKm = distanciaKm;
                 });
               },
@@ -141,7 +210,6 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
                 onPressed: () async {
                   if (_selectedDate == null ||
                       _embalajeSeleccionado == null ||
-                      _tipoViajeSeleccionado == null ||
                       _residenciaSeleccionada == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text("Completa todos los campos")),
@@ -197,24 +265,6 @@ class _CotizacionScreenState extends State<CotizacionScreen> {
                   onSelected: (_) => onSelect(option),
                 );
               }).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTextInput(String label, TextEditingController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: Colors.grey[200],
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
         ),
       ],
     );

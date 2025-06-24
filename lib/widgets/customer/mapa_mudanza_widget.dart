@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'dart:math';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart';
 
 class MapaMudanzaWidget extends StatefulWidget {
   final String? origen;
@@ -20,26 +23,14 @@ class MapaMudanzaWidget extends StatefulWidget {
 }
 
 class _MapaMudanzaWidgetState extends State<MapaMudanzaWidget> {
-  static const List<String> ciudadesBolivia = [
-    'La Paz',
-    'Santa Cruz',
-    'Cochabamba',
-    'Oruro',
-    'Potosí',
-    'Tarija',
-    'Sucre',
-    'Trinidad',
-    'Cobija',
-  ];
-
-  String? _origen;
-  String? _destino;
   GoogleMapController? _mapController;
   double? _distanciaKm;
-
   List<LatLng> _polylinePoints = [];
+  LatLng? _origenLatLng;
+  LatLng? _destinoLatLng;
 
-  final Map<String, LatLng> coordenadas = {
+  // Coordenadas de ciudades principales de Bolivia
+  static const Map<String, LatLng> ciudadesCoords = {
     'La Paz': LatLng(-16.5000, -68.1500),
     'Santa Cruz': LatLng(-17.7833, -63.1833),
     'Cochabamba': LatLng(-17.3895, -66.1568),
@@ -49,80 +40,117 @@ class _MapaMudanzaWidgetState extends State<MapaMudanzaWidget> {
     'Sucre': LatLng(-19.0333, -65.2627),
     'Trinidad': LatLng(-14.8333, -64.9000),
     'Cobija': LatLng(-11.0333, -68.7667),
+    'El Triangulo': LatLng(-17.8000, -63.2000),
+    'Yucumo': LatLng(-15.1622, -67.0500),
+    'Caranavi': LatLng(-15.8381, -67.5531),
+    'Coroico': LatLng(-16.1900, -67.7264),
   };
 
   @override
   void initState() {
     super.initState();
-    _origen = widget.origen;
-    _destino = widget.destino;
-    if (_origen != null && _destino != null) {
+    _setLatLngFromProps();
+  }
+
+  @override
+  void didUpdateWidget(MapaMudanzaWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.origen != oldWidget.origen ||
+        widget.destino != oldWidget.destino) {
+      _setLatLngFromProps();
+    }
+  }
+
+  void _setLatLngFromProps() {
+    final origen = widget.origen;
+    final destino = widget.destino;
+    setState(() {
+      _origenLatLng = ciudadesCoords[origen];
+      _destinoLatLng = ciudadesCoords[destino];
+      _polylinePoints = [];
+      _distanciaKm = null;
+    });
+    if (_origenLatLng != null && _destinoLatLng != null) {
       _fetchDistancia();
     }
   }
 
   Future<void> _fetchDistancia() async {
-    if (_origen == null || _destino == null) return;
-    final origenLatLng = coordenadas[_origen!];
-    final destinoLatLng = coordenadas[_destino!];
-    if (origenLatLng == null || destinoLatLng == null) return;
+    if (_origenLatLng == null || _destinoLatLng == null) return;
+    final origenLatLng = _origenLatLng!;
+    final destinoLatLng = _destinoLatLng!;
+    String waypoints = '';
+    final origenCiudad = widget.origen;
+    final destinoCiudad = widget.destino;
 
-    // Si es Cobija-Tarija o Tarija-Cobija, dividir en tramos nacionales
-    if ((_origen == 'Cobija' && _destino == 'Tarija') ||
-        (_origen == 'Tarija' && _destino == 'Cobija')) {
-      final tramos = [
-        ['Cobija', 'La Paz'],
-        ['La Paz', 'Oruro'],
-        ['Oruro', 'Potosí'],
-        ['Potosí', 'Tarija'],
-      ];
-      double distanciaTotal = 0.0;
-      List<LatLng> polylineTotal = [];
-      for (final tramo in tramos) {
-        final origenT = coordenadas[tramo[0]]!;
-        final destinoT = coordenadas[tramo[1]]!;
-        final url = Uri.parse(
-          'https://maps.googleapis.com/maps/api/directions/json?origin=${origenT.latitude},${origenT.longitude}&destination=${destinoT.latitude},${destinoT.longitude}&region=BO&key=AIzaSyBMHNLsoS3UuqvGiW3CeyvcCxhgjvtmLtc',
-        );
-        final response = await http.get(url);
-        if (response.statusCode == 200) {
-          final data = json.decode(response.body);
-          if (data['routes'] != null && data['routes'].isNotEmpty) {
-            final legs = data['routes'][0]['legs'];
-            final distancia = legs.fold(
-              0,
-              (sum, leg) => sum + leg['distance']['value'],
-            );
-            distanciaTotal += distancia / 1000.0;
-            final polyline = data['routes'][0]['overview_polyline']['points'];
-            final decoded = _decodePolyline(polyline);
-            if (polylineTotal.isNotEmpty) {
-              // Evitar duplicar el punto de unión
-              decoded.removeAt(0);
-            }
-            polylineTotal.addAll(decoded);
-          }
-        }
+    // Cobija <-> Cochabamba: waypoint Trinidad
+    if ((origenCiudad == 'Cobija' && destinoCiudad == 'Cochabamba') ||
+        (origenCiudad == 'Cochabamba' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      if (trinidad != null) {
+        waypoints = '&waypoints=${trinidad.latitude},${trinidad.longitude}';
       }
-      setState(() {
-        _distanciaKm = distanciaTotal;
-        _polylinePoints = polylineTotal;
-      });
-      if (_mapController != null && polylineTotal.isNotEmpty) {
-        final bounds = _getBounds(polylineTotal);
-        _mapController!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
-      }
-      widget.onChanged(
-        _origen ?? '',
-        _destino ?? '',
-        distanciaKm: _distanciaKm,
-      );
-      return;
     }
-    // ...código original para rutas normales...
-    List<String> waypointsList = [];
-    String waypoints =
-        waypointsList.isNotEmpty ? '&waypoints=${waypointsList.join('|')}' : '';
+    // Cobija <-> La Paz: waypoints El Triangulo, Yucumo, Caranavi, Coroico
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'La Paz') ||
+        (origenCiudad == 'La Paz' && destinoCiudad == 'Cobija')) {
+      final eltriangulo = ciudadesCoords['El Triangulo'];
+      if (eltriangulo != null) {
+        waypoints =
+            '&waypoints=' + '${eltriangulo.latitude},${eltriangulo.longitude}';
+      }
+    }
+    // Cobija <-> Tarija: waypoints Trinidad y Santa Cruz
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'Tarija') ||
+        (origenCiudad == 'Tarija' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      final santacruz = ciudadesCoords['Santa Cruz'];
+      if (trinidad != null && santacruz != null) {
+        waypoints =
+            '&waypoints=${trinidad.latitude},${trinidad.longitude}|${santacruz.latitude},${santacruz.longitude}';
+      }
+    }
+    // Cobija <-> Oruro: waypoints Trinidad y Cochabamba
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'Oruro') ||
+        (origenCiudad == 'Oruro' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      final cochabamba = ciudadesCoords['Cochabamba'];
+      if (trinidad != null && cochabamba != null) {
+        waypoints =
+            '&waypoints=${trinidad.latitude},${trinidad.longitude}|${cochabamba.latitude},${cochabamba.longitude}';
+      }
+    }
+    // Cobija - Tarija: waypoints Trinidad y Santa Cruz
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'Tarija') ||
+        (origenCiudad == 'Tarija' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      final santacruz = ciudadesCoords['Santa Cruz'];
+      if (trinidad != null && santacruz != null) {
+        waypoints =
+            '&waypoints=${trinidad.latitude},${trinidad.longitude}|${santacruz.latitude},${santacruz.longitude}';
+      }
+    }
+    // Cobija - Potosí: waypoints Trinidad y Sucre
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'Potosí') ||
+        (origenCiudad == 'Potosí' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      final sucre = ciudadesCoords['Sucre'];
+      if (trinidad != null && sucre != null) {
+        waypoints =
+            '&waypoints=${trinidad.latitude},${trinidad.longitude}|${sucre.latitude},${sucre.longitude}';
+      }
+    }
+    // Cobija - Sucre: waypoints Trinidad y Santa Cruz
+    else if ((origenCiudad == 'Cobija' && destinoCiudad == 'Sucre') ||
+        (origenCiudad == 'Sucre' && destinoCiudad == 'Cobija')) {
+      final trinidad = ciudadesCoords['Trinidad'];
+      final santacruz = ciudadesCoords['Santa Cruz'];
+      if (trinidad != null && santacruz != null) {
+        waypoints =
+            '&waypoints=${trinidad.latitude},${trinidad.longitude}|${santacruz.latitude},${santacruz.longitude}';
+      }
+    }
+
     final url = Uri.parse(
       'https://maps.googleapis.com/maps/api/directions/json?origin=${origenLatLng.latitude},${origenLatLng.longitude}&destination=${destinoLatLng.latitude},${destinoLatLng.longitude}$waypoints&region=BO&key=AIzaSyBMHNLsoS3UuqvGiW3CeyvcCxhgjvtmLtc',
     );
@@ -154,8 +182,8 @@ class _MapaMudanzaWidgetState extends State<MapaMudanzaWidget> {
           );
         }
         widget.onChanged(
-          _origen ?? '',
-          _destino ?? '',
+          '${_origenLatLng!.latitude},${_origenLatLng!.longitude}',
+          '${_destinoLatLng!.latitude},${_destinoLatLng!.longitude}',
           distanciaKm: _distanciaKm,
         );
       }
@@ -210,57 +238,60 @@ class _MapaMudanzaWidgetState extends State<MapaMudanzaWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        Text('¿Dónde comienza tu mudanza?'),
-        DropdownButton<String>(
-          value: _origen,
-          hint: const Text('Selecciona ciudad de origen'),
-          isExpanded: true,
-          items:
-              ciudadesBolivia
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-          onChanged: (val) {
-            setState(() => _origen = val);
-            widget.onChanged(_origen ?? '', _destino ?? '');
-            _moveCamera();
-          },
-        ),
-        const SizedBox(height: 8),
-        Text('¿Hacia dónde te mudamos?'),
-        DropdownButton<String>(
-          value: _destino,
-          hint: const Text('Selecciona ciudad de destino'),
-          isExpanded: true,
-          items:
-              ciudadesBolivia
-                  .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                  .toList(),
-          onChanged: (val) {
-            setState(() => _destino = val);
-            widget.onChanged(_origen ?? '', _destino ?? '');
-            _moveCamera();
-          },
-        ),
-        const SizedBox(height: 16),
+        Text('Ruta nacional entre ciudades seleccionadas'),
         SizedBox(
           height: 250,
           child: GoogleMap(
             initialCameraPosition: CameraPosition(
-              target: LatLng(-16.2902, -63.5887),
-              zoom: 5,
+              target: _origenLatLng ?? LatLng(-17.7833, -63.1833),
+              zoom: 6.5,
             ),
             markers: _buildMarkers(),
-            polylines: _buildPolyline(),
+            polylines:
+                _polylinePoints.isNotEmpty
+                    ? {
+                      Polyline(
+                        polylineId: PolylineId('ruta_real'),
+                        color: Colors.blue,
+                        width: 4,
+                        points: _polylinePoints,
+                      ),
+                    }
+                    : {},
             onMapCreated: (controller) => _mapController = controller,
             myLocationButtonEnabled: false,
             zoomControlsEnabled: true,
+            gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(
+                () => EagerGestureRecognizer(),
+              ),
+            },
+            // No permitir interacción de selección
+            onTap: null,
           ),
         ),
-        if (_distanciaKm != null)
+        if (_origenLatLng != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              'Origen: ${widget.origen}',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        if (_destinoLatLng != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 4.0),
+            child: Text(
+              'Destino: ${widget.destino}',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        if (_distanciaKm != null && _distanciaKm! > 0)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             child: Text(
-              'Distancia por carretera: ${_distanciaKm!.toStringAsFixed(1)} km',
+              'Distancia por carretera: '
+              '${_distanciaKm!.toStringAsFixed(2)} km',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
@@ -270,64 +301,47 @@ class _MapaMudanzaWidgetState extends State<MapaMudanzaWidget> {
 
   Set<Marker> _buildMarkers() {
     final Set<Marker> markers = {};
-    if (_origen != null && coordenadas[_origen!] != null) {
+    if (_origenLatLng != null) {
       markers.add(
         Marker(
           markerId: MarkerId('origen'),
-          position: coordenadas[_origen!]!,
-          infoWindow: InfoWindow(title: 'Origen: $_origen'),
+          position: _origenLatLng!,
+          infoWindow: InfoWindow(title: 'Origen'),
           icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          draggable: false,
         ),
       );
     }
-    if (_destino != null && coordenadas[_destino!] != null) {
+    if (_destinoLatLng != null) {
       markers.add(
         Marker(
           markerId: MarkerId('destino'),
-          position: coordenadas[_destino!]!,
-          infoWindow: InfoWindow(title: 'Destino: $_destino'),
+          position: _destinoLatLng!,
+          infoWindow: InfoWindow(title: 'Destino'),
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
+          draggable: false,
         ),
       );
     }
     return markers;
   }
 
-  Set<Polyline> _buildPolyline() {
-    if (_polylinePoints.isNotEmpty) {
-      return {
-        Polyline(
-          polylineId: PolylineId('ruta'),
-          color: Colors.blue,
-          width: 4,
-          points: _polylinePoints,
-        ),
-      };
-    }
-    return {};
+  double _calcularDistancia(LatLng origen, LatLng destino) {
+    const double radioTierra = 6371; // km
+    final double dLat = _gradosARadianes(destino.latitude - origen.latitude);
+    final double dLng = _gradosARadianes(destino.longitude - origen.longitude);
+    final double a =
+        (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(_gradosARadianes(origen.latitude)) *
+            cos(_gradosARadianes(destino.latitude)) *
+            (sin(dLng / 2) * sin(dLng / 2));
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return radioTierra * c;
   }
 
-  void _moveCamera() {
-    if (_origen != null && _destino != null) {
-      _fetchDistancia();
-      if (_distanciaKm != null) {
-        widget.onChanged(
-          _origen ?? '',
-          _destino ?? '',
-          distanciaKm: _distanciaKm,
-        );
-      } else {
-        widget.onChanged(_origen ?? '', _destino ?? '');
-      }
-    } else if (_mapController != null &&
-        _origen != null &&
-        coordenadas[_origen!] != null) {
-      _mapController!.animateCamera(
-        CameraUpdate.newLatLng(coordenadas[_origen!]!),
-      );
-      widget.onChanged(_origen ?? '', _destino ?? '');
-    }
+  double _gradosARadianes(double grados) {
+    return grados * pi / 180;
   }
 }

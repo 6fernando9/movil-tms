@@ -47,14 +47,22 @@ class ServicioNacionalScreen extends StatelessWidget {
 
   IconData _getIcon(String key) {
     switch (key) {
-      case "work": return Icons.work;
-      case "home": return Icons.home;
-      case "inventory": return Icons.inventory;
-      case "shield": return Icons.shield;
-      case "warehouse": return Icons.warehouse;
-      case "pets": return Icons.pets;
-      case "map": return Icons.map;
-      default: return Icons.local_shipping;
+      case "work":
+        return Icons.work;
+      case "home":
+        return Icons.home;
+      case "inventory":
+        return Icons.inventory;
+      case "shield":
+        return Icons.shield;
+      case "warehouse":
+        return Icons.warehouse;
+      case "pets":
+        return Icons.pets;
+      case "map":
+        return Icons.map;
+      default:
+        return Icons.local_shipping;
     }
   }
 
@@ -113,40 +121,48 @@ class ServicioNacionalScreen extends StatelessWidget {
                   Wrap(
                     spacing: 16,
                     runSpacing: 16,
-                    children: servicios.map((servicio) {
-                      return Container(
-                        width: MediaQuery.of(context).size.width * 0.42,
-                        child: Card(
-                          elevation: 4,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              children: [
-                                Icon(_getIcon(servicio['icono']!), size: 40, color: Colors.orangeAccent),
-                                const SizedBox(height: 8),
-                                Text(
-                                  servicio['titulo']!,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                  ),
-                                  textAlign: TextAlign.center,
+                    children:
+                        servicios.map((servicio) {
+                          return Container(
+                            width: MediaQuery.of(context).size.width * 0.42,
+                            child: Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      _getIcon(servicio['icono']!),
+                                      size: 40,
+                                      color: Colors.orangeAccent,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      servicio['titulo']!,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 15,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      servicio['descripcion']!,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Colors.black54,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  servicio['descripcion']!,
-                                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -169,7 +185,10 @@ class ServicioNacionalScreen extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  textStyle: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
