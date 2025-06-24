@@ -77,7 +77,7 @@ class MudanzasGoApp extends StatelessWidget {
             '/catalogo-vehiculos': (_) => VehiculoCatalogoScreen(),
             '/resumen-vehiculo': (_) => ResumenVehiculoScreen(),
             '/detalle-compra': (_) => DetalleCompraScreen(),
-            '/mis-servicios':(_)=>MisServiciosPage()
+            '/mis-servicios': (_) => MisServiciosPage(),
           },
         );
       },
